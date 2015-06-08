@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
+      <Optimization>Disabled</Optimization>
       <SDLCheck>
       </SDLCheck>
       <AdditionalIncludeDirectories>$(ProjectDir)\libs\3rdparty\;%(AdditionalIncludeDirectories);$(ProjectDir)\libs\3rdparty\opencv\include\;$(ProjectDir)\libs\3rdparty\ffmpeg\dev\include\;$(ProjectDir)\libs\3rdparty\pthread\include\;$(ProjectDir);</AdditionalIncludeDirectories>
@@ -59,6 +59,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <WholeProgramOptimization>true</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
