@@ -86,8 +86,8 @@ int ARDrone::initCommand(void)
 
         // Bitrate control mode
         sockCommand.sendf("AT*CONFIG_IDS=%d,\"%s\",\"%s\",\"%s\"\r", ++seq, ARDRONE_SESSION_ID, ARDRONE_PROFILE_ID, ARDRONE_APPLOCATION_ID);
-        //sockCommand.sendf("AT*CONFIG=%d,\"video:bitrate_ctrl_mode\",\"%d\"\r", ++seq, 0);     // VBC_MODE_DISABLED
-        sockCommand.sendf("AT*CONFIG=%d,\"video:bitrate_ctrl_mode\",\"%d\"\r", ++seq, 1);   // VBC_MODE_DYNAMIC
+        sockCommand.sendf("AT*CONFIG=%d,\"video:bitrate_ctrl_mode\",\"%d\"\r", ++seq, 0);     // VBC_MODE_DISABLED
+        //sockCommand.sendf("AT*CONFIG=%d,\"video:bitrate_ctrl_mode\",\"%d\"\r", ++seq, 1);   // VBC_MODE_DYNAMIC
         //sockCommand.sendf("AT*CONFIG=%d,\"video:bitrate_ctrl_mode\",\"%d\"\r", ++seq, 2);   // VBC_MANUAL
         msleep(100);
 

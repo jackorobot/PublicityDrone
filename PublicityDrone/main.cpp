@@ -14,11 +14,15 @@ ARDrone ardrone;
 
 double pos[3];
 
+cv::Point2f rect[4];
+
 pthread_mutex_t *coordMutex;
 
 int main()
 {
 	running = TRUE;
+
+	int contours_index_fin = 0;
 
 	if (!ardrone.open()){
 		CVDRONE_ERROR("Could not open connection to ARDrone!");
@@ -159,7 +163,8 @@ void *HUDprocess(void *params){
 	cv::resizeWindow("Camera", 1280, 720);
 
 	cv::Size windowSize(1280, 720);
-	cv::Scalar batteryColor = cv::Scalar(0, 0, 255);
+	cv::Scalar batteryColor(0, 0, 255);
+	cv::Scalar rectColor(0, 255, 0);
 
 	cv::Point batteryLocation;
 	batteryLocation.x = 0;
@@ -167,6 +172,11 @@ void *HUDprocess(void *params){
 
 	while (running){
 		cv::Mat image = ardrone.getImage();
+
+		cv::line(image, rect[0], rect[1], cv::Scalar(0, 255, 0));
+		cv::line(image, rect[1], rect[2], cv::Scalar(0, 255, 0));
+		cv::line(image, rect[2], rect[3], cv::Scalar(0, 255, 0));
+		cv::line(image, rect[3], rect[0], cv::Scalar(0, 255, 0));
 
 		cv::Mat imageOut;
 		cv::resize(image, imageOut, windowSize);
@@ -195,7 +205,99 @@ void *HUDprocess(void *params){
 }
 
 void *trackingProcess(void *params){
-	
+	// Thresholds
+	int minH = 0, maxH = 255;
+	int minS = 0, maxS = 255;
+	int minV = 0, maxV = 255;
+
+	// XML save data
+	std::string filename("thresholds.xml");
+	cv::FileStorage fs(filename, cv::FileStorage::READ);
+
+	// If there is a save file then read it
+	if (fs.isOpened()) {
+		maxH = fs["H_MAX"];
+		minH = fs["H_MIN"];
+		maxS = fs["S_MAX"];
+		minS = fs["S_MIN"];
+		maxV = fs["V_MAX"];
+		minV = fs["V_MIN"];
+		fs.release();
+	}
+
+	// Create a window
+	cv::namedWindow("binarized");
+	cv::createTrackbar("H max", "binarized", &maxH, 255);
+	cv::createTrackbar("H min", "binarized", &minH, 255);
+	cv::createTrackbar("S max", "binarized", &maxS, 255);
+	cv::createTrackbar("S min", "binarized", &minS, 255);
+	cv::createTrackbar("V max", "binarized", &maxV, 255);
+	cv::createTrackbar("V min", "binarized", &minV, 255);
+	cv::resizeWindow("binarized", 0, 0);
+	cv::moveWindow("binarized", 0, 640);
+
+	while (running){
+		cv::waitKey(1);
+		
+		cv::Mat image = ardrone.getImage();
+
+		cv::Mat hsvimage;
+		cv::cvtColor(image, hsvimage, cv::COLOR_BGR2HSV_FULL);
+
+		cv::Mat binarized;
+		cv::Scalar lower(minH, minS, minV);
+		cv::Scalar upper(maxH, maxS, maxV);
+		cv::inRange(hsvimage, lower, upper, binarized);
+
+		cv::imshow("binarized", binarized);
+
+		//removing noise
+		cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(3, 3));
+		cv::morphologyEx(binarized, binarized, cv::MORPH_CLOSE, kernel);
+
+		//Detect contours
+		std::vector<std::vector<cv::Point>> contours;
+		cv::findContours(binarized.clone(), contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
+
+		//Find largest contour
+		int contour_index = -1;
+		double max_area = 0.0;
+		for (size_t i = 0; i < contours.size(); i++){
+			double area = fabs(cv::contourArea(contours[i]));
+			if (area > max_area){
+				contour_index = i;
+				max_area = area;
+			}
+		}
+
+		//Object detected
+		if (contour_index >= 0){
+			//cv::Moments moments = cv::moments(contours[contour_index], true);
+			//double marker_y = (int)(moments.m01 / moments.m00);
+			//double marker_x = (int)(moments.m10 / moments.m00);
+
+			////Show result
+			//rect = cv::boundingRect(contours[contour_index]);
+
+			cv::RotatedRect boundingBox = cv::minAreaRect(contours[contour_index]);
+			cv::Point2f corners[4];
+			boundingBox.points(corners);
+
+			std::memcpy(rect, corners, sizeof(corners));
+		}
+	}
+
+	// Save thresholds
+	fs.open(filename, cv::FileStorage::WRITE);
+	if (fs.isOpened()) {
+		cv::write(fs, "H_MAX", maxH);
+		cv::write(fs, "H_MIN", minH);
+		cv::write(fs, "S_MAX", maxS);
+		cv::write(fs, "S_MIN", minS);
+		cv::write(fs, "V_MAX", maxV);
+		cv::write(fs, "V_MIN", minV);
+		fs.release();
+	}
 
 	return NULL;
 }
