@@ -1,26 +1,54 @@
 #include "ardrone/ardrone.h"
+#include "PIDcontroller.h"
 
 #include <stdint.h>
 #include <stdio.h>
 
 //#define _DEBUG 1
+//#define _READKEY 1
+
+#define WANTED_AREA 500.0
+#define MARKER_MIDDLE_X 320.0
+#define MARKER_MIDDLE_Y 180.0
+
+struct areaindex{
+	double area;
+	int index;
+};
 
 void *coordinateProcess(void *);
 void *HUDprocess(void *);
 void *trackingProcess(void *);
 
+bool compareArea(const areaindex &, const areaindex &);
+
 bool running;
+bool following;
 ARDrone ardrone;
 
 double pos[3];
 
-cv::Point2f rect[4];
+cv::Rect rect1;
+cv::Rect rect2;
+double marker1_x;
+double marker1_y;
+double marker2_x;
+double marker2_y;
+double area1;
+double area2;
+
+double arealeft;
+double arearight;
+double markerMiddle_x;
+double markerMiddle_y;
 
 pthread_mutex_t *coordMutex;
 
 int main()
 {
 	running = TRUE;
+
+	following = FALSE;
 
 	int contours_index_fin = 0;
 
@@ -98,7 +126,7 @@ void *coordinateProcess(void *params){
 	kalman.measurementNoiseCov = R;
 
 	while (running){
-		cv::waitKey(33);
+		Sleep(33);
 
 		// Get an image
 		cv::Mat image = ardrone.getImage();
@@ -173,10 +201,18 @@ void *HUDprocess(void *params){
 	while (running){
 		cv::Mat image = ardrone.getImage();
 
-		cv::line(image, rect[0], rect[1], cv::Scalar(0, 255, 0));
-		cv::line(image, rect[1], rect[2], cv::Scalar(0, 255, 0));
-		cv::line(image, rect[2], rect[3], cv::Scalar(0, 255, 0));
-		cv::line(image, rect[3], rect[0], cv::Scalar(0, 255, 0));
+		cv::rectangle(image, rect1, rectColor);
+		cv::rectangle(image, rect2, rectColor);
+
+		cv::circle(image, cv::Point(markerMiddle_x, markerMiddle_y), 4, cv::Scalar(255, 0, 0), -1);
+
+		std::stringstream stringarea1;
+		stringarea1 << area1;
+		std::stringstream stringarea2;
+		stringarea2 << area2;
+
+		cv::putText(image, stringarea1.str(), cv::Point((int)marker1_x, (int)marker1_y), CV_FONT_HERSHEY_SIMPLEX, 1.0, batteryColor);
+		cv::putText(image, stringarea2.str(), cv::Point((int)marker2_x, (int)marker2_y), CV_FONT_HERSHEY_SIMPLEX, 1.0, batteryColor);
 
 		cv::Mat imageOut;
 		cv::resize(image, imageOut, windowSize);
@@ -187,19 +223,26 @@ void *HUDprocess(void *params){
 		cv::imshow("Camera", imageOut);
 
 		int key = cv::waitKey(1);
+#ifndef _READKEY
 		switch (key){
 		case 27:
 			running = FALSE;
 			break;
-		case 116:
+		case 108:
 			ardrone.takeoff();
 			break;
-		case 108:
+		case 116:
 			ardrone.landing();
+			break;
+		case 102:
+			following = !following;
 			break;
 		default:
 			break;
 		}
+#else
+		std::cout << key << std::endl;
+#endif
 	}
 	return NULL;
 }
@@ -238,7 +281,6 @@ void *trackingProcess(void *params){
 
 	while (running){
 		cv::waitKey(1);
-		
 		cv::Mat image = ardrone.getImage();
 
 		cv::Mat hsvimage;
@@ -259,31 +301,61 @@ void *trackingProcess(void *params){
 		std::vector<std::vector<cv::Point>> contours;
 		cv::findContours(binarized.clone(), contours, cv::RETR_CCOMP, cv::CHAIN_APPROX_SIMPLE);
 
+#ifdef _DEBUG
+		cv::drawContours(image, contours, -1, cv::Scalar(0,0,255));
+		cv::imshow("DEBUG CONTOURS", image);
+#endif
+
 		//Find largest contour
-		int contour_index = -1;
-		double max_area = 0.0;
+		std::vector<struct areaindex> areacontours;
 		for (size_t i = 0; i < contours.size(); i++){
 			double area = fabs(cv::contourArea(contours[i]));
-			if (area > max_area){
-				contour_index = i;
-				max_area = area;
-			}
+			areacontours.push_back(areaindex());
+			areacontours[i].area = area;
+			areacontours[i].index = i;
 		}
 
+		std::sort(areacontours.begin(), areacontours.end(), compareArea);
+
+		int indexContour1 = areacontours[0].index;
+		int indexContour2 = areacontours[1].index;
+
+		area1 = areacontours[0].area;
+		area2 = areacontours[1].area;
+
 		//Object detected
-		if (contour_index >= 0){
-			//cv::Moments moments = cv::moments(contours[contour_index], true);
-			//double marker_y = (int)(moments.m01 / moments.m00);
-			//double marker_x = (int)(moments.m10 / moments.m00);
+		if (indexContour1 >= 0 && indexContour2 >= 0 && indexContour1 != indexContour2){
+			cv::Moments moments1 = cv::moments(contours[indexContour1], true);
+			marker1_y = (int)(moments1.m01 / moments1.m00);
+			marker1_x = (int)(moments1.m10 / moments1.m00);
 
-			////Show result
-			//rect = cv::boundingRect(contours[contour_index]);
+			cv::Moments moments2 = cv::moments(contours[indexContour2], true);
+			marker2_y = (int)(moments2.m01 / moments2.m00);
+			marker2_x = (int)(moments2.m10 / moments2.m00);
 
-			cv::RotatedRect boundingBox = cv::minAreaRect(contours[contour_index]);
-			cv::Point2f corners[4];
-			boundingBox.points(corners);
+			if (marker1_x > marker2_x){
+				arealeft = areacontours[0].area;
+				arearight = areacontours[1].area;
+			}
+			else{
+				arealeft = areacontours[1].area;
+				arearight = areacontours[0].area;
+			}
 
-			std::memcpy(rect, corners, sizeof(corners));
+			markerMiddle_x = (marker1_x + marker2_x) / 2;
+			markerMiddle_y = (marker1_y + marker2_y) / 2;
+
+			//Show result
+			rect1 = cv::boundingRect(contours[indexContour1]);
+			rect2 = cv::boundingRect(contours[indexContour2]);
+		}
+
+		if (following){
+			double distanceError = (area1 + area2) / 2 - WANTED_AREA;
+			double angleError = MARKER_MIDDLE_X - markerMiddle_x;
+			double heightError = MARKER_MIDDLE_Y - markerMiddle_y;
+			double sideError = (arealeft - arearight);
+
 		}
 	}
 
@@ -300,4 +372,8 @@ void *trackingProcess(void *params){
 	}
 
 	return NULL;
+}
+
+bool compareArea(const areaindex &a, const areaindex &b){
+	return a.area > b.area;
 }
