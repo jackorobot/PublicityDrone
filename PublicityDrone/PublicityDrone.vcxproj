@@ -82,6 +82,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="libs\ardrone\ardrone.h" />
+    <ClInclude Include="PIDcontroller.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libs\ardrone\ardrone.cpp" />
@@ -93,6 +94,7 @@
     <ClCompile Include="libs\ardrone\version.cpp" />
     <ClCompile Include="libs\ardrone\video.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="PIDcontroller.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

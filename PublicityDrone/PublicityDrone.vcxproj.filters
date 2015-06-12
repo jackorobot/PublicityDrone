@@ -24,6 +24,9 @@
     <ClInclude Include="libs\ardrone\ardrone.h">
       <Filter>Header Files\ardrone</Filter>
     </ClInclude>
+    <ClInclude Include="PIDcontroller.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -52,6 +55,9 @@
     </ClCompile>
     <ClCompile Include="libs\ardrone\config.cpp">
       <Filter>Source Files\ardrone</Filter>
+    </ClCompile>
+    <ClCompile Include="PIDcontroller.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

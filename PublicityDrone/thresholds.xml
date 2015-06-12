@@ -1,9 +1,15 @@
 <?xml version="1.0"?>
 <opencv_storage>
-<H_MAX>126</H_MAX>
-<H_MIN>1</H_MIN>
-<S_MAX>128</S_MAX>
-<S_MIN>73</S_MIN>
+<H_MAX>45</H_MAX>
+<H_MIN>0</H_MIN>
+<S_MAX>168</S_MAX>
+<S_MIN>2</S_MIN>
 <V_MAX>255</V_MAX>
-<V_MIN>223</V_MIN>
+<V_MIN>225</V_MIN>
+<H_MAX_BLUE>178</H_MAX_BLUE>
+<H_MIN_BLUE>93</H_MIN_BLUE>
+<S_MAX_BLUE>196</S_MAX_BLUE>
+<S_MIN_BLUE>47</S_MIN_BLUE>
+<V_MAX_BLUE>255</V_MAX_BLUE>
+<V_MIN_BLUE>210</V_MIN_BLUE>
 </opencv_storage>

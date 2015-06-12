@@ -34,7 +34,7 @@ void PIDcontroller::setGains(double Kp_in, double Ki_in, double Kd_in, double dT
 double PIDcontroller::calcControl(double e_now){
 	e_int = e_now * dT + e_int;
 	double de = (e_now - e_prev) / dT;
-	double u = Kp*e_now + Ki*e_int + Kd*de;
+	double u = (Kp*e_now) + (Ki*e_int) + (Kd*de);
 	e_prev = e_now;
 	return u;
 }
